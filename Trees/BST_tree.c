@@ -1,92 +1,84 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <math.h>
 
-// Struktura węzła drzewa BST
 typedef struct Node {
     int key;
-    struct Node *left, *right;
+    struct Node* left, * right;
+    struct Node* parent;
+    int height;
 } Node;
 
-// Funkcja tworząca nowy węzeł
-Node *newNode(int item) {
-    Node *temp = (Node *) malloc(sizeof(Node));
+Node* newNode(int item) {
+    Node* temp = (Node*)malloc(sizeof(Node));
     temp->key = item;
     temp->left = temp->right = NULL;
+    temp->parent = NULL;
+    temp->height = 1;
     return temp;
 }
 
-// Funkcja dodająca nowy węzeł do drzewa BST
-Node *insert(Node *node, int key) {
+Node* insert(Node* node, int key) {
     if (node == NULL) return newNode(key);
 
     if (key < node->key)
+    {
         node->left = insert(node->left, key);
+        node->left->parent = node;
+    }
     else if (key > node->key)
+    {
         node->right = insert(node->right, key);
+        node->right->parent = node;
+    }
 
     return node;
 }
 
-// Funkcja wyszukująca element o najmniejszej wartości w drzewie BST i wypisująca ścieżkę
-Node *findMin(Node *node) {
-    Node *current = node;
+int max(int a, int b) {
+    return (a > b) ? a : b;
+}
 
-    // Szukanie węzła o najmniejszej wartości
+Node* findMin(Node* node) {
+    Node* current = node;
     while (current && current->left != NULL) {
         printf("%d -> ", current->key);
         current = current->left;
     }
-
-    // Wypisanie ostatniego węzła (najmniejszej wartości)
     if (current != NULL)
         printf("%d\n", current->key);
 
     return current;
 }
 
-// Funkcja wyszukująca element o największej wartości w drzewie BST i wypisująca ścieżkę
-Node *findMax(Node *node) {
-    Node *current = node;
-
-    // Szukanie węzła o największej wartości
+Node* findMax(Node* node) {
+    Node* current = node;
     while (current && current->right != NULL) {
         printf("%d -> ", current->key);
         current = current->right;
     }
-
-    // Wypisanie ostatniego węzła (największej wartości)
     if (current != NULL)
         printf("%d\n", current->key);
 
     return current;
 }
 
-// Funkcja znajdująca poziom węzła o danym kluczu i wypisująca elementy na tym poziomie
-int findLevel(Node *node, int key, int level) {
+int findLevel(Node* node, int key, int level) {
     if (node == NULL)
-        return -1;
-
-    if (node->key == key) {
-        printf("Elements at the level %d: ", level);
-        printf("%d ", node->key);
-        if (node->left)
-            printf("%d ", node->left->key);
-        if (node->right)
-            printf("%d ", node->right->key);
-        printf("\n");
+        return 0;
+    if (node->key == key)
         return level;
-    }
 
     int downlevel = findLevel(node->left, key, level + 1);
-    if (downlevel != -1)
+    if (downlevel != 0)
         return downlevel;
 
     downlevel = findLevel(node->right, key, level + 1);
     return downlevel;
 }
 
-// Funkcja pomocnicza do wypisywania elementów drzewa w porządku malejącym (przechodzenie w porządku odwrotnym inorder)
-void reverseInorder(Node *node) {
+void reverseInorder(Node* node) {
     if (node == NULL)
         return;
 
@@ -95,15 +87,13 @@ void reverseInorder(Node *node) {
     reverseInorder(node->left);
 }
 
-// Funkcja wypisująca wszystkie elementy drzewa w porządku malejącym
-void printDescending(Node *root) {
+void printDescending(Node* root) {
     printf("Tree elements in descending order: ");
     reverseInorder(root);
     printf("\n");
 }
 
-// Funkcja pomocnicza do wypisywania drzewa w porządku pre-order
-void printPreorder(Node *node) {
+void printPreorder(Node* node) {
     if (node == NULL)
         return;
 
@@ -112,8 +102,7 @@ void printPreorder(Node *node) {
     printPreorder(node->right);
 }
 
-// Funkcja obliczająca wysokość drzewa
-int getHeight(Node *node) {
+int getHeight(Node* node) {
     if (node == NULL)
         return 0;
 
@@ -123,8 +112,7 @@ int getHeight(Node *node) {
     return 1 + (leftHeight > rightHeight ? leftHeight : rightHeight);
 }
 
-// Funkcja wypisująca poddrzewo w porządku pre-order, podając jego wysokość
-int printSubtreeAndHeight(Node *node, int key, int level) {
+int printSubtreeAndHeight(Node* node, int key, int level) {
     if (node == NULL)
         return -1;
 
@@ -142,61 +130,116 @@ int printSubtreeAndHeight(Node *node, int key, int level) {
     return subtreeHeight;
 }
 
+Node* deleteSubtree(Node* root) {
+    if (root == NULL)
+        return 0;
 
-// Funkcja usuwająca poddrzewo
-Node *deleteSubtree(Node *node) {
-    if (node == NULL)
-        return NULL;
+    deleteSubtree(root->left);
+    deleteSubtree(root->right);
 
-    node->left = deleteSubtree(node->left);
-    node->right = deleteSubtree(node->right);
-    free(node);
-    return NULL;
-}
-
-// Funkcja równoważąca drzewo przez rotacje (algorytm DSW)
-Node *balanceTree(Node *root) {
-    // Implementacja algorytmu DSW (Day-Stout-Warren)
-
-    // Tymczasowy korzeń
-    Node *tempRoot = newNode(0);
-    tempRoot->right = root;
-
-    Node *current = tempRoot;
-    Node *prev = NULL;
-
-    // Prawe obroty
-    while (current != NULL) {
-        if (current->left != NULL) {
-            Node *left = current->left;
-            current->left = left->right;
-            left->right = current;
-            current = left;
-            if (prev != NULL)
-                prev->right = left;
-            else
-                tempRoot->right = left;
-            prev = left;
-        } else {
-            prev = current;
-            current = current->right;
+    root->left = NULL;
+    root->right = NULL;
+    if (root->parent != NULL)
+    {
+        if (root->parent->left != NULL)
+        {
+            if (root->parent->left->key == root->key) root->parent->left = NULL;
+        }
+        if (root->parent->right != NULL)
+        {
+            if (root->parent->right->key == root->key) root->parent->right = NULL;
         }
     }
-
-    // Lewe obroty
-    current = tempRoot->right;
-    while (current != NULL && current->right != NULL) {
-        Node *right = current->right;
-        current->right = right->left;
-        right->left = current;
-        current = right;
-    }
-
-    return tempRoot->right;
+    free(root);
 }
 
-// Funkcja usuwająca drzewo
-Node *deleteTree(Node *node) {
+int height(Node* node) {
+    if (node == NULL)
+        return 0;
+    return 1 + max(height(node->left), height(node->right));
+}
+
+int bstToVine(Node* grand) {
+    int count = 0;
+    struct Node* tmp = grand->right;
+
+    // Traverse until tmp becomes NULL
+    while (tmp) {
+        // If left exists for node
+        // pointed by tmp then
+        // right rotate it.
+        if (tmp->left) {
+            Node* oldTmp = tmp;
+            tmp = tmp->left;
+            oldTmp->left = tmp->right;
+            tmp->right = oldTmp;
+            grand->right = tmp;
+        }
+            // If left doesn't exist
+            // add 1 to count and
+            // traverse further right to
+            // flatten remaining BST.
+        else {
+            count++;
+            grand = tmp;
+            tmp = tmp->right;
+        }
+    }
+    return count;
+}
+
+// Function to compress given tree
+// with its root as grand->right.
+void compress(Node* grand, int m) {
+    struct Node* tmp = grand->right;
+
+    // Traverse and left-rotate root m times
+    // to compress given vine form of BST.
+    for (int i = 0; i < m; i++) {
+        struct Node* oldTmp = tmp;
+        tmp = tmp->right;
+        grand->right = tmp;
+        oldTmp->right = tmp->left;
+        tmp->left = oldTmp;
+        grand = tmp;
+        tmp = tmp->right;
+    }
+}
+
+// Function to implement the algorithm
+Node* balanceBST(Node* root) {
+    // create dummy node with value 0
+    struct Node* grand = newNode(0);
+
+    // assign the right of dummy node as our input BST
+    grand->right = root;
+
+    // get the number of nodes in input BST and
+    // simultaneously convert it into right linked list.
+    int count = bstToVine(grand);
+
+    // gets the height of tree in which all levels
+    // are completely filled.
+    int h = log2(count + 1);
+
+    // get number of nodes until second last level
+    int m = pow(2, h) - 1;
+
+    // Left rotate for excess nodes at last level
+    compress(grand, count - m);
+
+    // Left rotation till m becomes 0
+    // Step is done as mentioned in algo to
+    // make BST balanced.
+    for (m = m / 2; m > 0; m /= 2) {
+        compress(grand, m);
+    }
+
+    // return the balanced tree
+    return grand->right;
+}
+
+Node* deleteTree(Node* node) {
     if (node == NULL)
         return NULL;
 
@@ -206,7 +249,96 @@ Node *deleteTree(Node *node) {
     return NULL;
 }
 
-// Funkcja wyświetlająca menu
+void printNodesAtLevel(struct Node* root, int level, int currentLevel) {
+    if (root == NULL)
+        return;
+
+    if (currentLevel == level) {
+        printf("%d ", root->key);
+        //ot = deleteNode(root, root->key);
+    }
+    else {
+        printNodesAtLevel(root->left, level, currentLevel + 1);
+        printNodesAtLevel(root->right, level, currentLevel + 1);
+    }
+}
+
+struct Node* minValueNode(struct Node* node) {
+    struct Node* current = node;
+    while (current->left != NULL)
+        current = current->left;
+
+    return current;
+}
+
+void printBst(struct Node* root, int level)
+{
+    if (root != NULL)
+    {
+        printf("\nLevel: %d\n", level + 1);
+        printf("Key: %d\n", root->key);
+        if (root->right != NULL) printf("Right: %d\n", root->right->key);
+        if (root->left != NULL) printf("Left: %d\n", root->left->key);
+        printBst(root->right, level + 1);
+        printBst(root->left, level + 1);
+    }
+
+}
+
+struct Node* deleteNode(struct Node* root, int key) {
+    if (root == NULL)
+        return root;
+
+    if (key < root->key)
+        root->left = deleteNode(root->left, key);
+    else if (key > root->key)
+        root->right = deleteNode(root->right, key);
+    else {
+        if ((root->left == NULL) || (root->right == NULL)) {
+            struct Node* temp = root->left ? root->left : root->right;
+
+            if (temp == NULL) {
+                temp = root;
+                root = NULL;
+            }
+            else
+                *root = *temp;
+            free(temp);
+        }
+        else {
+            struct Node* temp = minValueNode(root->right);
+            root->key = temp->key;
+            root->right = deleteNode(root->right, temp->key);
+        }
+    }
+    return root;
+}
+
+struct Node* getNode(struct Node* root, int key)
+{
+    if (root == NULL)
+        return NULL;
+
+    if (root->key == key)
+        return root;
+
+    // Search in the left subtree if the key is less than the current node's key
+    if (key < root->key)
+        return getNode(root->left, key);
+
+    // Search in the right subtree if the key is greater than the current node's key
+    return getNode(root->right, key);
+}
+
+int getHeightOfSubtree(struct Node* root) {
+    if (root == NULL)
+        return 0;
+    int leftHeight = getHeightOfSubtree(root->left);
+    int rightHeight = getHeightOfSubtree(root->right);
+    return 1 + max(leftHeight, rightHeight);
+}
+
+// Funkcja wy�wietlaj�ca menu
 void displayMenu() {
     printf("\nMenu:\n");
     printf("1. Find the element with the smallest value in the tree\n");
@@ -220,16 +352,37 @@ void displayMenu() {
 }
 
 int main() {
-    Node *root = NULL;
-    int n, i, choice, key;
+    Node* root = NULL;
+    int n, i, choice, key, num;
+    double create_time;
+    char ch;
+    srand(time(NULL));
 
-    printf("Enter the number of items to insert (n <= 10): ");
-    scanf("%d", &n);
-    printf("Enter %d numbers to insert: ", n);
-    for (i = 0; i < n; ++i) {
-        int num;
-        scanf("%d", &num);
-        root = insert(root, num);
+    printf("Want to generate numbers or input by yourself? (g/i):");
+    scanf(" %c", &ch);
+    if (ch == 'g') {
+        printf("Enter the number of items to generate (n <= 15): ");
+        scanf("%d", &n);
+        printf("Generated numbers: ");
+        for (i = 0; i < n; ++i) {
+            num = rand() % 100 + 1;
+            printf("%d ", num);
+            root = insert(root, num);
+        }
+        printf("\n");
+    }
+    else if (ch == 'i') {
+        printf("Enter the number of items to input (n <= 15): ");
+        scanf("%d", &n);
+        printf("Enter %d numbers: ", n);
+        for (i = 0; i < n; ++i) {
+            scanf("%d", &num);
+            root = insert(root, num);
+        }
+    }
+    else {
+        printf("Invalid choice.\n");
+        return 1;
     }
 
     do {
@@ -239,12 +392,12 @@ int main() {
         switch (choice) {
             case 1: {
                 printf("Path to the element with the smallest value: ");
-                Node *minNode = findMin(root);
+                findMin(root);
                 break;
             }
             case 2: {
                 printf("Path to the element with the highest value: ");
-                Node *maxNode = findMax(root);
+                findMax(root);
                 break;
             }
             case 3: {
@@ -253,9 +406,11 @@ int main() {
                 int level = findLevel(root, key, 1);
                 if (level != -1) {
                     printf("The node with the key %d is at %d\n", key, level);
-                    // Usuwanie węzła
-                    // (implementacja usunięcia węzła należy do Ciebie, można użyć funkcji deleteSubtree())
-                } else {
+                    printf("Elements at the level %d: ", level);
+                    printNodesAtLevel(root, level, 1);
+                    deleteNode(root, key);
+                }
+                else {
                     printf("Node with key %d not found in tree.\n", key);
                 }
                 break;
@@ -265,40 +420,47 @@ int main() {
                 break;
             }
             case 5: {
-                printf("Provide subtree root key to dump and delete: ");
+                printf("Enter the value of the root: ");
                 scanf("%d", &key);
-                int subtreeHeight = printSubtreeAndHeight(root, key, 1);
-                if (subtreeHeight != -1) {
+                struct Node* subtreeRoot = getNode(root, key);
+                if (subtreeRoot != NULL)
+                {
+                    printf("Subtree in Preorder: ");
+                    printPreorder(subtreeRoot);
+                    printf("\n");
+                    int subtreeHeight = getHeightOfSubtree(subtreeRoot);
                     printf("Subtree height: %d\n", subtreeHeight);
-                    // Usuwanie poddrzewa
-                    // (implementacja usuwania poddrzewa należy do Ciebie, można użyć funkcji deleteSubtree())
-                } else {
-                    printf("Subtree with root key %d not found.\n", key);
+                    deleteSubtree(subtreeRoot);
+                    printf("Removed subtree.\n");
                 }
                 break;
             }
             case 6: {
-                printf("Trees before sustainability:\n");
+                printf("Tree before balancing:\n");
                 printPreorder(root);
                 printf("\n");
 
-                // Zrównoważanie drzewa
-                root = balanceTree(root);
+                root = balanceBST(root);
 
-                printf("Trees after sustainability:\n");
+                printf("Tree after balancing:\n");
                 printPreorder(root);
                 printf("\n");
                 break;
             }
             case 7:
+            {
                 break;
+            }
+            case 8:
+            {
+                printBst(root, 0);
+            }
             default:
                 printf("Wrong option. Try again.\n");
         }
     } while (choice != 7);
 
-    // Usuwanie drzewa po zakończeniu programu
-    root = deleteTree(root);
+    deleteTree(root);
 
     return 0;
 }
